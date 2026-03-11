@@ -1,0 +1,11 @@
+<svg preserveAspectRatio="none" width="100%" height="100%" overflow="visible" style="display: block;" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="openmoji:flag-cambodia">
+<path id="Vector" d="M2.5 8.5H33.5V27.5H2.5V8.5Z" fill="var(--fill-0, #D22F27)"/>
+<path id="Vector_2" d="M2.5 22.5H33.5V27.5H2.5V22.5ZM2.5 8.5H33.5V13.5H2.5V8.5Z" fill="var(--fill-0, #1E50A0)"/>
+<g id="Vector_3">
+<path d="M22.9445 21H13.0625L14.121 18.8825H21.886L22.9445 21ZM19.4155 17.8235H16.5915L18.0035 15L19.4155 17.8235ZM21.533 17.8235H19.768L20.43 16.412H20.871L21.533 17.8235ZM16.239 17.8235H14.474L15.136 16.412H15.577L16.239 17.8235ZM14.121 17.8235H21.8855L21.886 18.8825H14.121V17.8235Z" fill="var(--fill-0, white)"/>
+<path d="M14.121 18.8825L13.0625 21H22.9445L21.886 18.8825M14.121 18.8825H21.886M14.121 18.8825V17.8235H21.8855L21.886 18.8825M19.4155 17.8235H16.5915L18.0035 15L19.4155 17.8235ZM21.533 17.8235H19.768L20.43 16.412H20.871L21.533 17.8235ZM16.239 17.8235H14.474L15.136 16.412H15.577L16.239 17.8235Z" stroke="var(--stroke-0, white)" stroke-width="0.833333" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+<path id="Vector_4" d="M2.5 8.5H33.5V27.5H2.5V8.5Z" stroke="var(--stroke-0, black)" stroke-width="1.66667" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>
