@@ -102,10 +102,10 @@ export function createAppsScript({ properties = {}, headers = LIVE_HEADERS, fetc
       createTextOutput(content) { return { content, mimeType: "text/plain", setMimeType(m) { this.mimeType = m; return this; } }; },
     },
     Utilities: {
-      // Only the format Code.gs uses: ISO 8601 in a UTC+8 zone.
+      // Only what Code.gs uses: ISO 8601 in Singapore time (UTC+8).
       formatDate(date, timeZone, format) {
         if (format !== "yyyy-MM-dd'T'HH:mm:ssXXX") throw new Error(`Unsupported format ${format}`);
-        if (!["Asia/Singapore", "Asia/Shanghai"].includes(timeZone)) throw new Error(`Unsupported zone ${timeZone}`);
+        if (timeZone !== "Asia/Singapore") throw new Error(`Unsupported zone ${timeZone}`);
         return new Date(date.getTime() + 8 * 3600e3).toISOString().slice(0, 19) + "+08:00";
       },
     },
