@@ -96,7 +96,7 @@ await step("valid submission (Both directions) shows success, writes the row and
   const row = after.at(-1);
   assert.equal(row["Company name"], "E2E Both directions");
   assert.equal(row["Consultation direction"], "Both directions");
-  assert.equal(row["Current price range"], "'+USD 50");
+  assert.equal(row["Current price range"], "+USD 50");
   assert.equal(row["Meeting format"], "Online meeting / 线上会议");
   assert.equal(row["Status"], "new");
   assert.equal(await direction.inputValue(), "");

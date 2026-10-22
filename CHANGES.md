@@ -68,6 +68,12 @@ Ported verbatim except:
 - A failing notification email never loses the row (it is written first).
 - Every rejected submission is logged (`Submission rejected: <reason>`) in Apps Script → Executions.
 - `selfTest()` (run once from the editor) logs how the Sheet stores formula-like and `+`-prefixed values.
+  Result on the real Sheet (2026-10-22): the apostrophe is consumed by Sheets, so values show exactly as typed
+  (`+65 9123 4567`, and `=1+1` as text). Both protections are needed: a string starting with `=` becomes a formula
+  even in a plain-text cell, and without plain-text format `0123` becomes `123` and dates are converted. The unit
+  tests' fake Sheet mirrors this behaviour.
+  Note: a CSV *export* of the Sheet contains values as typed (e.g. `=1+1`). Open exports in Google Sheets, or import
+  them as text in Excel, rather than double-clicking a CSV into Excel.
 
 ## Removed
 

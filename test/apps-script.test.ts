@@ -34,7 +34,7 @@ describe("doPost — valid submissions", () => {
       expect(row["Consultation direction"]).toBe(direction);
       expect(row["Company name"]).toBe("TEST ONLY");
       expect(row["Name & job title"]).toBe("QA 验证人员");
-      expect(row["WhatsApp / WeChat"]).toBe("'+65 9123 4567"); // neutralised: leading "+"
+      expect(row["WhatsApp / WeChat"]).toBe("+65 9123 4567"); // the neutralising apostrophe is consumed by Sheets
       expect(row["Information consent"]).toBe("Agreed");
       expect(row["China legal entity"]).toBe(direction === "Going global" ? "" : "No / 没有");
       expect(row["Target overseas markets"]).toBe(direction === "Entering China" ? "" : "Singapore, Malaysia / 新加坡、马来西亚");
@@ -45,6 +45,7 @@ describe("doPost — valid submissions", () => {
       expect(headers.slice(0, 34)).toEqual(LIVE_HEADERS); // live layout untouched
       expect(headers.slice(34)).toEqual(["Submitted at\n提交时间", "Status\n状态"]); // appended at the end
       expect(api.sheet()!.formats.at(-1)).toMatchObject({ row: 2, format: "@" }); // stored as plain text
+      expect(api.sheet()!.formulas).toEqual([]);
       expect(api.lock).toEqual({ waits: 1, releases: 1 });
       expect(api.mails).toHaveLength(1);
       expect(api.mails[0].to).toBe("Shanshan.diao@pulsenova.gg");
@@ -62,14 +63,16 @@ describe("doPost — valid submissions", () => {
     expect(api.sheet()!.cells[0]).toHaveLength(36);
   });
 
-  it("neutralises every formula-like prefix", () => {
+  it("never lets input become a formula, and shows it exactly as typed", () => {
     const api = createAppsScript();
-    api.post({ ...payloads["Entering China"], companyName: "=HYPERLINK(\"http://x\")", regions: "@SUM(A1)", challenges: "-1+1", priceRange: "+100" });
+    api.post({ ...payloads["Entering China"], companyName: "=HYPERLINK(\"http://x\")", regions: "@SUM(A1)", challenges: "-1+1", priceRange: "+100", preferredDate: "0123" });
     const [row] = api.sheet()!.records();
-    expect(row["Company name"]).toBe("'=HYPERLINK(\"http://x\")");
-    expect(row["Preferred cities or regions"]).toBe("'@SUM(A1)");
-    expect(row["Biggest market-entry challenges"]).toBe("'-1+1");
-    expect(row["Current price range"]).toBe("'+100");
+    expect(api.sheet()!.formulas).toEqual([]);
+    expect(row["Company name"]).toBe("=HYPERLINK(\"http://x\")"); // plain text, not a formula
+    expect(row["Preferred cities or regions"]).toBe("@SUM(A1)");
+    expect(row["Biggest market-entry challenges"]).toBe("-1+1");
+    expect(row["Current price range"]).toBe("+100");
+    expect(row["Preferred date"]).toBe("0123");
     expect(api.mails[0].subject).toBe("New consultation · =HYPERLINK(\"http://x\")"); // email is plain text, not neutralised
   });
 

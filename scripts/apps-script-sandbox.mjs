@@ -28,6 +28,7 @@ class FakeSheet {
     this.name = name;
     this.cells = headers ? [[...headers]] : [];
     this.formats = [];
+    this.formulas = [];
   }
   getLastRow() {
     for (let r = this.cells.length; r > 0; r--) if (this.cells[r - 1].some((v) => v !== "" && v != null)) return r;
@@ -39,8 +40,16 @@ class FakeSheet {
     return max;
   }
   getRange(row, column, numRows = 1, numColumns = 1) {
-    const { cells, formats } = this;
-    const set = (r, c, v) => { while (cells.length < r) cells.push([]); const line = cells[r - 1]; while (line.length < c) line.push(""); line[c - 1] = v; };
+    const { cells, formats, formulas } = this;
+    // Mirrors real Sheets (verified with selfTest() on 2026-10-22): a leading apostrophe is consumed and the
+    // rest stored as text; a string starting with "=" becomes a formula even in plain-text (@) cells.
+    const store = (v) => {
+      if (typeof v !== "string") return v;
+      if (v.startsWith("'")) return v.slice(1);
+      if (v.startsWith("=")) { formulas.push(v); return `<FORMULA ${v}>`; }
+      return v;
+    };
+    const set = (r, c, raw) => { const v = store(raw); while (cells.length < r) cells.push([]); const line = cells[r - 1]; while (line.length < c) line.push(""); line[c - 1] = v; };
     return {
       getValues: () => Array.from({ length: numRows }, (_, i) => Array.from({ length: numColumns }, (_, j) => cells[row - 1 + i]?.[column - 1 + j] ?? "")),
       setValue(v) { set(row, column, v); return this; },
