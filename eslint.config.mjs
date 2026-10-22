@@ -37,7 +37,7 @@ export default tseslint.config(
     rules: {
       "no-var": "off",
       "@typescript-eslint/no-unused-vars": "off",
-      "no-unused-vars": ["error", { varsIgnorePattern: "^(doPost|doGet|setup)$" }],
+      "no-unused-vars": ["error", { varsIgnorePattern: "^(doPost|doGet|setup|selfTest)$" }],
     },
   },
 );

@@ -16,7 +16,7 @@ var SHEET_NAME = 'Responses 客户数据';
 var DEFAULT_NOTIFY_EMAIL = 'Shanshan.diao@pulsenova.gg';
 var TIME_ZONE = 'Asia/Singapore';
 var MAX_BODY_BYTES = 32 * 1024;
-var HONEYPOT_FIELD = 'address2';
+var HONEYPOT_FIELD = 'pn_hp_check';
 var TURNSTILE_FIELD = 'cf-turnstile-response';
 var DIRECTIONS = ['Entering China', 'Going global', 'Both directions'];
 var REQUIRED = ['companyName', 'contactName', 'email', 'consent'];
@@ -70,6 +70,7 @@ function doPost(e) {
   var result;
   try {
     result = handleSubmission_(e && e.postData ? e.postData.contents : '');
+    if (!result.ok) console.warn('Submission rejected: ' + result.error);
   } catch (error) {
     console.error('Consultation submission failed', error);
     result = { ok: false, error: 'Unable to save submission.' };
@@ -93,10 +94,43 @@ function setup() {
   }
   var props = PropertiesService.getScriptProperties();
   console.log('Sheet ready: ' + SHEET_NAME);
-  console.log('TURNSTILE_SECRET ' + (props.getProperty('TURNSTILE_SECRET') ? 'set' : 'NOT set (verification skipped)'));
+  console.log('TURNSTILE_SECRET ' + (props.getProperty('TURNSTILE_SECRET')
+    ? 'set — the GitHub variable VITE_TURNSTILE_SITE_KEY MUST also be set, or every submission is rejected'
+    : 'NOT set (verification skipped) — leave VITE_TURNSTILE_SITE_KEY empty too'));
   console.log('ALLOWED_HOSTNAMES ' + (props.getProperty('ALLOWED_HOSTNAMES') || '(any)'));
   console.log('NOTIFY_EMAIL ' + notifyEmail_(props));
   console.log('Mail quota remaining today: ' + MailApp.getRemainingDailyQuota());
+}
+
+/**
+ * Diagnostic, run once from the editor: shows how Sheets stores values written the way appendRecord_
+ * writes them (plain-text format + setValues), with and without the formula-neutralising apostrophe.
+ * Writes to a temporary tab, logs the results, then deletes the tab. Paste the log back to the developer.
+ */
+function selfTest() {
+  var samples = ['+65 9123 4567', "'+65 9123 4567", '=1+1', "'=1+1", '+1+1', "'+1+1", '-5', '@SUM(1)', '0123', '11 Nov 2026'];
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = spreadsheet.insertSheet('_selftest_' + new Date().getTime());
+  try {
+    var plain = sheet.getRange(1, 1, 1, samples.length);
+    plain.setNumberFormat('@');
+    plain.setValues([samples]);
+    var automatic = sheet.getRange(2, 1, 1, samples.length);
+    automatic.setValues([samples]);
+    SpreadsheetApp.flush();
+    [['plain text (@)', plain], ['automatic', automatic]].forEach(function (pair) {
+      var values = pair[1].getValues()[0];
+      var shown = pair[1].getDisplayValues()[0];
+      var formulas = pair[1].getFormulas()[0];
+      console.log('--- ' + pair[0] + ' ---');
+      for (var i = 0; i < samples.length; i++) {
+        console.log(JSON.stringify(samples[i]) + ' → value ' + JSON.stringify(values[i]) + ' · shown ' + JSON.stringify(shown[i]) +
+          (formulas[i] ? ' · FORMULA ' + JSON.stringify(formulas[i]) : ''));
+      }
+    });
+  } finally {
+    spreadsheet.deleteSheet(sheet);
+  }
 }
 
 function handleSubmission_(raw) {
@@ -141,7 +175,7 @@ function validate_(data) {
   for (var j = 0; j < REQUIRED.length; j++) {
     if (!record[REQUIRED[j]]) return { error: 'Required fields are missing.' };
   }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(record.email)) return { error: 'Please provide a valid email address.' };
+  if (!/^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)*$/.test(record.email)) return { error: 'Please provide a valid email address.' };
   if (DIRECTIONS.indexOf(record.consultationDirection) === -1) return { error: 'Please select a consultation direction.' };
   if (record.consultationDirection !== 'Entering China' && (!record.targetMarkets || !record.overseasStage)) {
     return { error: 'Please provide your target overseas markets and expansion stage.' };

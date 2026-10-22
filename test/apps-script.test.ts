@@ -11,7 +11,7 @@ const base: Record<string, string | string[]> = {
   challenges: "Finding partners / 寻找合作伙伴", priorityGoal: "Validate demand", regions: "Shanghai",
   timeline: "Within 3 months / 3个月内", resourcesNeeded: "Distributors", targetContacts: "Retailers",
   budget: "To be discussed / 待讨论", supportInterest: "Unsure / 暂不确定", consultationFocus: "Market opportunity",
-  consent: "Agreed", address2: "", "cf-turnstile-response": "XXXX.DUMMY.TOKEN.XXXX",
+  consent: "Agreed", pn_hp_check: "", "cf-turnstile-response": "XXXX.DUMMY.TOKEN.XXXX",
 };
 const china = { chinaEntity: "No / 没有", chinaStage: "Market research / 正在调研", trademark: "Not registered / 尚未注册", currentChinaSetup: "None" };
 const overseas = { targetMarkets: "Singapore, Malaysia / 新加坡、马来西亚", overseasStage: "Market research / 正在调研", overseasSetup: "None / 无" };
@@ -106,6 +106,13 @@ describe("doPost — valid submissions", () => {
     expect(api.sheet()!.records()).toHaveLength(1);
   });
 
+  it("accepts every email the browser's type=email accepts, e.g. without a dot in the domain", () => {
+    for (const email of ["name@company", "first.last+tag@sub.example.co", "王@例子.中国"]) {
+      const api = createAppsScript();
+      expect(api.post({ ...payloads["Entering China"], email }).ok, email).toBe(true);
+    }
+  });
+
   it("skips Turnstile when no secret is configured, and email when NOTIFY_EMAIL=off", () => {
     const api = createAppsScript({ properties: { NOTIFY_EMAIL: "off" } });
     expect(api.post(payloads["Entering China"]).ok).toBe(true);
@@ -126,7 +133,9 @@ describe("doPost — rejected submissions write nothing", () => {
   for (const field of ["companyName", "contactName", "email", "consent"]) {
     it(`missing ${field}`, () => rejects({ ...payloads["Entering China"], [field]: "  " }, "Required fields are missing."));
   }
-  it("invalid email", () => rejects({ ...payloads["Entering China"], email: "not-an-email" }, "Please provide a valid email address."));
+  for (const email of ["not-an-email", "a@.com", "a@b..com", "a b@c.com", "a@b@c.com"]) {
+    it(`invalid email ${email}`, () => rejects({ ...payloads["Entering China"], email }, "Please provide a valid email address."));
+  }
   it("unknown direction", () => rejects({ ...payloads["Entering China"], consultationDirection: "Sideways" }, "Please select a consultation direction."));
   it("going global without targetMarkets", () => rejects({ ...payloads["Going global"], targetMarkets: "" }, "Please provide your target overseas markets and expansion stage."));
   it("both directions without overseasStage", () => rejects({ ...payloads["Both directions"], overseasStage: undefined }, "Please provide your target overseas markets and expansion stage."));
@@ -153,7 +162,7 @@ describe("doPost — rejected submissions write nothing", () => {
 describe("doPost — honeypot and health check", () => {
   it("honeypot filled → fake success, nothing written, Turnstile not called", () => {
     const api = createAppsScript({ properties: withTurnstile, fetch: turnstileOk });
-    expect(api.post({ ...payloads["Entering China"], address2: "123 Bot Street" }).ok).toBe(true);
+    expect(api.post({ ...payloads["Entering China"], pn_hp_check: "123 Bot Street" }).ok).toBe(true);
     expect(api.sheet()!.records()).toHaveLength(0);
     expect(api.fetchCalls).toHaveLength(0);
     expect(api.mails).toHaveLength(0);

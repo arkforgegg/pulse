@@ -15,6 +15,8 @@ const OVERSEAS_FIELDS = ["targetMarkets", "overseasStage", "overseasSetup"];
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
 const problems = [];
+const turnstileRequests = [];
+page.on("request", (req) => { if (req.url().includes("challenges.cloudflare.com")) turnstileRequests.push(req.url()); });
 page.on("console", (msg) => { if (msg.type() === "error") problems.push(`console: ${msg.text()}`); });
 page.on("pageerror", (error) => problems.push(`pageerror: ${error.message}`));
 await page.addInitScript(() => {
@@ -29,8 +31,13 @@ const step = async (name, fn) => { await fn(); results.push(name); console.log(`
 
 await page.goto(SITE_URL, { waitUntil: "load" });
 
-await step("form starts collapsed; overseas CTA opens it with Going global selected", async () => {
+await step("form starts collapsed; Turnstile is not loaded until the form is opened", async () => {
+  await page.waitForTimeout(1000);
   assert.equal(await page.locator(".intakeDisclosure").evaluate((d) => d.open), false);
+  assert.deepEqual(turnstileRequests, []);
+});
+
+await step("overseas CTA opens the form with Going global selected", async () => {
   await page.getByRole("link", { name: "Discuss your overseas plans" }).click();
   assert.equal(await page.locator(".intakeDisclosure").evaluate((d) => d.open), true);
   assert.equal(await direction.inputValue(), "Going global");
@@ -49,6 +56,13 @@ await step("Turnstile renders invisibly (interaction-only) and issues a token", 
   await page.waitForFunction(() => document.querySelector('[name="cf-turnstile-response"]')?.value, null, { timeout: 30000 });
   const box = await page.locator(".consultForm > div:not(.hpField)").last().boundingBox();
   assert.ok(box && box.height === 0, `Turnstile container should take no space, got ${JSON.stringify(box)}`);
+});
+
+await step("honeypot is off-screen and has an autofill-proof name", async () => {
+  const hp = page.locator('.hpField input[name="pn_hp_check"]');
+  assert.equal(await hp.getAttribute("tabindex"), "-1");
+  const box = await hp.boundingBox();
+  assert.ok(box && box.x < -1000, `honeypot should be off-screen, got ${JSON.stringify(box)}`);
 });
 
 await step("empty required fields block submission (native validation)", async () => {
@@ -112,6 +126,36 @@ await step("network failure (e.g. Google unreachable) shows the error state", as
   await page.locator("button.submit").click();
   await page.locator(".error").waitFor({ timeout: 15000 });
   await page.unroute(`${API_URL}/exec`);
+});
+
+await step("submitting right after opening the form waits for a (slow) Turnstile token", async () => {
+  const fresh = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  fresh.on("pageerror", (error) => problems.push(`pageerror: ${error.message}`));
+  await fresh.route("https://challenges.cloudflare.com/turnstile/v0/api.js*", async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 8000));
+    await route.continue();
+  });
+  await fresh.goto(SITE_URL, { waitUntil: "load" });
+  const before = (await rows()).length;
+  await fresh.locator(".intakeDisclosure > summary").click();
+  const freshDirection = fresh.locator('select[name="consultationDirection"]');
+  await freshDirection.selectOption("Entering China");
+  for (const el of await fresh.locator(".consultForm [required]").all()) {
+    const { tag, type, name, readOnly } = await el.evaluate((n) => ({ tag: n.tagName, type: n.type, name: n.name, readOnly: n.readOnly }));
+    if (readOnly || name === "consultationDirection") continue;
+    if (tag === "SELECT") await el.selectOption({ index: 1 });
+    else if (type === "checkbox") await el.check();
+    else if (type === "email") await el.fill("fast@company");
+    else await el.fill(name === "companyName" ? "E2E fast submit" : `Test ${name}`);
+  }
+  assert.equal(await fresh.locator('[name="cf-turnstile-response"]').count(), 0, "token must not exist yet (script delayed)");
+  await fresh.locator("button.submit").click();
+  await fresh.locator(".success").waitFor({ timeout: 20000 });
+  const row = (await rows()).at(-1);
+  assert.equal((await rows()).length, before + 1);
+  assert.equal(row["Company name"], "E2E fast submit");
+  assert.equal(row["Work email"], "fast@company", "email without a dot in the domain is accepted");
+  await fresh.close();
 });
 
 await browser.close();

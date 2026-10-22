@@ -29,14 +29,22 @@ web app runs *as its owner* and stops working if that account goes away.
 
    | Property | Value |
    |---|---|
-   | `TURNSTILE_SECRET` | Turnstile **secret** key from step 2 (leave unset to disable the check) |
+   | `TURNSTILE_SECRET` | Turnstile **secret** key from step 2 (leave unset to disable the check — see the warning below) |
    | `ALLOWED_HOSTNAMES` | `pulsenova.gg,www.pulsenova.gg` |
    | `NOTIFY_EMAIL` | who gets a new-submission email (default `Shanshan.diao@pulsenova.gg`; `off` disables) |
+
+   > ⚠️ **Turnstile is both-or-neither.** If `TURNSTILE_SECRET` is set here, the GitHub variable
+   > `VITE_TURNSTILE_SITE_KEY` (step 3) **must** be set too — otherwise the site sends no token and **every
+   > submission is rejected**. To run without Turnstile, leave **both** empty.
 
 5. In the editor pick the function **`setup`** → **Run**. Approve the permission prompt (Sheets, send email, external
    requests). The log should say `Sheet ready` and list the properties. It also adds two columns at the **end** of the
    tab: `Submitted at 提交时间` and `Status 状态`. Existing columns are untouched; you may reorder columns later — the
    script matches columns by the English first line of each header.
+   Then pick **`selfTest`** → **Run** once and send the log (*Execution log* panel) to the developer. It writes a
+   few sample values (`+65 …`, `=1+1`, …) to a temporary tab the same way submissions are written, logs how Sheets
+   stored and displays them, and deletes the tab. This confirms that phone numbers starting with `+` don't show a
+   stray apostrophe and that formulas never run.
 6. **Deploy → New deployment** → type **Web app** → *Execute as:* **Me** · *Who has access:* **Anyone** → Deploy.
    Copy the **Web app URL** (ends in `/exec`).
 7. Check it: open the `/exec` URL in a browser → `{"ok":true}`.
@@ -51,10 +59,12 @@ Turnstile is Cloudflare's free CAPTCHA replacement. It only needs a free Cloudfl
 1. https://dash.cloudflare.com → **Turnstile → Add widget**.
 2. Hostnames: `pulsenova.gg`, `www.pulsenova.gg` (add `localhost` only if you want to test with real keys locally).
 3. Widget mode: **Managed**. (The site renders it with `appearance: interaction-only`, so it is invisible unless
-   Cloudflare decides a visitor needs a challenge.)
+   Cloudflare decides a visitor needs a challenge. The Turnstile script is only loaded once a visitor opens the
+   booking form, and on submit the page waits up to 15 s for the token.)
 4. Copy the **site key** (public → GitHub variable) and the **secret key** (→ Script Property `TURNSTILE_SECRET`).
 
-To run without Turnstile, leave both empty/unset. Spam protection then relies on the honeypot and validation only.
+To run without Turnstile, leave **both** the site key and the secret empty/unset (see the warning in step 1).
+Spam protection then relies on the honeypot and validation only.
 
 ## 3. GitHub: repository variables and cutover
 
@@ -96,8 +106,10 @@ sheet contains personal data. There is no admin page; the Sheet *is* the admin v
 3. Confirm three new rows in "Responses 客户数据" with the right answers under the right headers, `Submitted at` and
    `Status = new`, and three notification emails at `NOTIFY_EMAIL`.
 4. Delete the three test rows.
-5. If a submission shows the red error: Apps Script editor → **Executions** shows the reason; check the Script
-   Properties, that `ALLOWED_HOSTNAMES` matches the site's hostname, and that the deployment is the latest version.
+5. If a submission shows the red error: Apps Script editor → **Executions** — each rejected submission logs
+   `Submission rejected: <reason>`. "Verification failed" means a Turnstile problem: check that the secret **and** the
+   GitHub site key are both set (or both empty), that `ALLOWED_HOSTNAMES` matches the site's hostname, and that the
+   deployment is the latest version.
 
 ## 6. Decommission ChatGPT Sites
 

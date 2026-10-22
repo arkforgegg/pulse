@@ -37,9 +37,11 @@ Ported verbatim except:
   if the site is ever served from a sub-path).
 - Submit: posts to `VITE_APPS_SCRIPT_URL` as `text/plain` (a CORS "simple request" — Apps Script cannot answer a
   preflight), and treats a JSON reply other than `{ok:true}` as an error (Apps Script always replies HTTP 200).
-- Added a hidden honeypot input (`address2`, off-screen, `tabIndex=-1`, `autocomplete=off`).
+- Added a hidden honeypot input (`pn_hp_check` — a name browsers and password managers don't autofill; off-screen,
+  `tabIndex=-1`, `autocomplete=off`, password-manager ignore attributes).
 - Added Cloudflare Turnstile (`web/src/turnstile.ts`) in **interaction-only** mode — invisible unless a challenge is
-  needed, so the form looks the same. Optional: disabled when no site key is configured.
+  needed, so the form looks the same. Its script loads only when the booking form is opened, and on submit the page
+  waits (up to 15 s) for the token before posting. Optional: disabled when no site key is configured.
 - Success / error / sending states are unchanged.
 
 `<title>`, meta description and favicon moved from `app/layout.tsx` to `web/index.html`; `<html lang="en">` and
@@ -57,12 +59,15 @@ Ported verbatim except:
 
 - Required: company name, name & title, email, consent. Direction must be one of the three values; for
   *Going global* / *Both directions*, target overseas markets and expansion stage are required. Same error messages.
-- New: email format check; per-field length caps (names 200, email 240, WhatsApp/WeChat 120, others 4000); only the 34
+- New: email format check (same shape as the browser's `type=email` rule, so nothing the form accepts is rejected —
+  e.g. `name@company`); per-field length caps (names 200, email 240, WhatsApp/WeChat 120, others 4000); only the 34
   known fields are stored (unknown keys dropped); multi-value fields joined with `", "`.
 - New: values starting with `= + - @ tab CR` are prefixed with `'` and the row is written as plain text, so user input
   can never run as a spreadsheet formula.
 - New: `Submitted at 提交时间` (ISO, UTC+8) and `Status 状态` (`new`) columns, appended at the end of the existing tab.
 - A failing notification email never loses the row (it is written first).
+- Every rejected submission is logged (`Submission rejected: <reason>`) in Apps Script → Executions.
+- `selfTest()` (run once from the editor) logs how the Sheet stores formula-like and `+`-prefixed values.
 
 ## Removed
 

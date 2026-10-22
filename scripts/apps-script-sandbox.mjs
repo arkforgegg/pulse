@@ -75,7 +75,7 @@ export function createAppsScript({ properties = {}, headers = LIVE_HEADERS, fetc
 
   /** @type {Record<string, any>} */
   const context = {
-    console: { log() {}, error() {} },
+    console: { log() {}, warn() {}, error() {} },
     unescape, encodeURIComponent, JSON, Date, String, Array, Object, RegExp,
     SpreadsheetApp: {
       getActiveSpreadsheet: () => ({
