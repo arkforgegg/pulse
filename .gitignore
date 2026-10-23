@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.env*.local
+*.log
+.vite/
+test-results/
+# Local handoff material (preserved on the local `v18-export` branch, not part of the site)
+/source/
+/tests/
+/ENVIRONMENT.example.txt
+/SOURCE-SHA256.json
+/.original/
